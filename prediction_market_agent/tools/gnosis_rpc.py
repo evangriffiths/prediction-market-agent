@@ -1,6 +1,8 @@
 import requests
 from web3.types import Wei
 
+from prediction_market_agent.tools.web3_utils import wei_to_xdai
+
 GNOSIS_RPC_URL = "https://rpc.gnosischain.com/"
 
 
@@ -20,4 +22,5 @@ def get_balance(address: str) -> Wei:
 
 
 if __name__ == "__main__":
-    print(get_balance("0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1"))
+    balance = get_balance("0xf3318C420e5e30C12786C4001D600e9EE1A7eBb1")
+    print(f"Wei: {balance}, xDai: {wei_to_xdai(balance)}")

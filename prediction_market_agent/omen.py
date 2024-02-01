@@ -473,12 +473,13 @@ def omen_sell_outcome_tx(
         check_tx_receipt(withdraw_receipt)
 
 
-def omen_claim_winnings(
+def omen_claim_winnings_tx(
     web3: Web3,
     market: Market,
     from_address: HexAddress,
     from_private_key: PrivateKey,
-    tx_params: Optional[TxParams] = None,
+    expected_amount: Wei,
+    auto_withdraw: bool,
 ) -> TxReceipt:
     """
     See https://gnosisscan.io/address/0x9083a2b699c0a4ad06f63580bde2635d26a3eef0#code -> `redeemPositions` function.
@@ -496,7 +497,8 @@ def omen_claim_winnings(
     parent_collection_id = bytes.fromhex(HASH_ZERO[2:])  # Taken from Olas
     index_sets = market.condition.index_sets  # Taken from Olas
 
-    return call_function_on_contract_tx(
+    nonce = web3.eth.get_transaction_count(from_address)
+    redeem_tx = call_function_on_contract_tx(
         web3=web3,
         contract_address=conditionaltokens_address,
         contract_abi=OMEN_FPMM_CONDITIONALTOKENS_ABI,
@@ -509,8 +511,23 @@ def omen_claim_winnings(
             condition_id,
             index_sets,
         ],
-        tx_params=tx_params,
+        tx_params={"nonce": nonce},
     )
+    check_tx_receipt(redeem_tx)
+
+    nonce += ONE_NONCE  # Increase after each tx.
+    if auto_withdraw:
+        # Optionally, withdraw from the collateral token back to the `from_address` wallet.
+        withdraw_receipt = omen_withdraw_collateral_token_tx(
+            web3=web3,
+            market=market,
+            amount_wei=expected_amount,
+            from_address=from_address,
+            from_private_key=from_private_key,
+            tx_params={"nonce": nonce},
+        )
+        nonce += ONE_NONCE  # Increase after each tx.
+        check_tx_receipt(withdraw_receipt)
 
 
 if __name__ == "__main__":
